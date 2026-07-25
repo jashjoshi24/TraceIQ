@@ -1,0 +1,30 @@
+- `[x]` Global Refactoring & Rebranding
+  - `[x]` Replace "SentinelX" with "TraceIQ" in `README.md`
+  - `[x]` Replace "SentinelX" with "TraceIQ" in `frontend/package.json`
+  - `[x]` Replace "SentinelX" with "TraceIQ" in `backend/main.py`
+  - `[x]` Replace "SentinelX" with "TraceIQ" in `frontend/src/app/layout.tsx`
+  - `[x]` Replace "SentinelX" with "TraceIQ" in `frontend/src/app/page.tsx`
+- `[x]` Frontend: App Shell & Routing
+  - `[x]` Extract Header and Sidebar from `page.tsx` to `layout.tsx`
+  - `[x]` Add "PCAP Manager" to Sidebar navigation
+- `[x]` Frontend: PCAP Manager Module
+  - `[x]` Create `app/pcap/page.tsx`
+  - `[x]` Create `components/pcap/UploadZone.tsx`
+  - `[x]` Create `components/pcap/UploadStats.tsx`
+  - `[x]` Create `components/pcap/ProcessingQueue.tsx`
+  - `[x]` Create `components/pcap/UploadsTable.tsx`
+  - `[x]` Create `components/pcap/FileDetails.tsx`
+  - `[x]` Create `lib/usePcapWebSocket.ts`
+- `[x]` Backend: Database Setup (PostgreSQL)
+  - `[x]` Update `requirements.txt`
+  - `[x]` Set up `database/connection.py`
+  - `[x]` Define models in `database/models.py`
+  - `[ ]` Generate Alembic migration
+- `[x]` Backend: API Routes & Storage
+  - `[x]` Create `services/storage.py`
+  - `[x]` Create `routers/pcap.py`
+  - `[x]` Update `main.py` to include new router
+- `[x]` Backend: WebSockets & Job Queue
+  - `[x]` Create `routers/websocket.py`
+  - `[x]` Create `services/queue.py`
+  - `[x]` Create `worker/stub_pipeline.py`

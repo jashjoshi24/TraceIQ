@@ -1,6 +1,6 @@
-# SentinelX — SOC Dashboard
+# TraceIQ — SOC Dashboard
 
-This is the first implementation pass of the SentinelX SOC Dashboard module.
+This is the first implementation pass of the TraceIQ SOC Dashboard module.
 
 ## How to Run the Preview
 

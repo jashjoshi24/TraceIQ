@@ -1,43 +1,104 @@
-# Implementation Plan: Full SentinelX SOC Dashboard
+# TraceIQ — PCAP Manager Module Implementation Plan
 
-This plan covers implementing the *complete* set of widgets, tables, charts, and backend APIs requested in your original prompt. Since the scope is large, we will break the Next.js `page.tsx` monolith into a modular widget-based architecture and expand the FastAPI backend to serve robust mock data for all required endpoints.
+This document outlines the architectural changes and implementation steps to rebrand SentinelX to TraceIQ and build the new PCAP Manager module.
 
 ## User Review Required
+> [!IMPORTANT]
+> **Database & Cache Infrastructure:** This plan introduces PostgreSQL and Redis to the backend stack, which currently only relies on in-memory mock data. You will need to ensure you have a running PostgreSQL and Redis instance locally (e.g., via Docker Compose) when we execute this, as the background processing queue and WebSocket pub/sub rely heavily on them.
+> 
+> **App Layout Refactoring:** The existing Next.js dashboard has the Top Navigation and Sidebar hardcoded into `app/page.tsx`. To support the new PCAP Manager page without duplicating code, we will refactor the frontend to extract the shell into `app/layout.tsx`.
 
-Because of the scale of this update, I will need to generate a significant amount of code across multiple files in the frontend and backend. 
+## Open Questions
+- Since RBAC (Authentication & Roles) is mentioned but the current mock backend has no actual JWT implementation, should I build a stubbed/mock user context that we inject (e.g. hardcoding the "Analyst" role), or do you want me to implement a basic mock JWT flow?
+- Do you want to use a specific Redis-based queue library in Python (like `Celery` or `RQ`), or a lightweight AsyncIO background task + Redis pub-sub for this stub implementation?
 
-- **Frontend Architecture:** I will use the feature-sliced directory structure you seem to have started (`frontend/src/features/dashboard/widgets/...`, `components/...`).
-- **Data Tables:** I will use `@tanstack/react-table` to build a reusable, paginated, sortable, and filterable data table component. We will use this for Alerts, Incidents, Investigations, and Devices.
-- **Charts:** I will use `recharts` for Threat Trends, Alert Distributions, etc.
-- **Backend Mock Data:** I will heavily expand `backend/main.py` to provide rich mock data for *all* the new dashboard widgets and implement query parameter parsing for the data tables (sorting, pagination).
+---
 
 ## Proposed Changes
 
-### 1. Backend Expansion (FastAPI)
-- **`backend/main.py`**:
-  - Add comprehensive mock data generators for Alerts, Incidents, Investigations, and Devices (100+ items each).
-  - Implement `/api/alerts`, `/api/incidents`, `/api/investigations`, `/api/devices` with full pagination (`page`, `size`), sorting (`sort_by`, `order`), and filtering (`severity`, `status`) logic using Python list comprehensions.
-  - Add endpoints for charts: `/api/charts/threat-trends`, `/api/charts/alert-distribution`, `/api/charts/incident-trends`, etc.
-  - Add endpoints for specialized widgets: `/api/threat-intel`, `/api/mitre-coverage`, `/api/system/health`.
+### 1. Global Refactoring & Rebranding
+Search and replace "SentinelX" with "TraceIQ" across the entire repository.
+#### [MODIFY] README.md
+#### [MODIFY] package.json
+#### [MODIFY] backend/main.py
+#### [MODIFY] frontend/src/app/layout.tsx
+#### [MODIFY] frontend/src/app/page.tsx
 
-### 2. Frontend Infrastructure
-- **`frontend/src/components/ui/`**: Implement generic UI components like `Card`, `Badge`, `Button`, `Input`, `Select` (using tailwind).
-- **`frontend/src/components/DataTable.tsx`**: A reusable wrapper around `@tanstack/react-table` supporting server-side pagination and sorting.
-- **`frontend/src/lib/api.ts`**: API client helper for fetching from `http://localhost:8000`.
+***
 
-### 3. Frontend Dashboard Layout & Widgets
-- **`frontend/src/app/page.tsx`**: Refactor into a CSS Grid layout importing individual widget components.
-- **KPI Widgets**: Create separate components for Security, Threat, Incident, Investigation, and Evidence Overviews.
-- **Chart Widgets**: Implement `ThreatTrendsChart`, `AlertDistributionChart`, etc.
-- **Table Widgets**: Implement `RecentAlertsWidget`, `IncidentsWidget`, `DevicesWidget`.
-- **Specialty Widgets**: Implement `LiveActivityFeed` (using polling/intervals to simulate WebSocket for now), `MitreCoverageMap`, `SystemHealthGrid`.
+### 2. Frontend: App Shell & Routing
+Extract the layout shell from the dashboard to share it across multiple views.
+#### [MODIFY] frontend/src/app/layout.tsx
+- Move the `header` (Top Navigation) and `aside` (Sidebar) into this root layout.
+- Update the sidebar to include a new navigation item for "PCAP Manager".
+#### [MODIFY] frontend/src/app/page.tsx
+- Remove the duplicated layout shell components.
+
+***
+
+### 3. Frontend: PCAP Manager Module
+Create the new frontend UI module inside `frontend/src/app/pcap`.
+#### [NEW] frontend/src/app/pcap/page.tsx
+- Main page container combining all PCAP manager widgets.
+#### [NEW] frontend/src/components/pcap/UploadZone.tsx
+- Drag-and-drop component, `.pcap/.pcapng` validation, chunk/progress state handling.
+#### [NEW] frontend/src/components/pcap/UploadStats.tsx
+- KPI widgets matching the style of the SOC Dashboard.
+#### [NEW] frontend/src/components/pcap/ProcessingQueue.tsx
+- Live table connecting to WebSockets to display in-flight job states.
+#### [NEW] frontend/src/components/pcap/UploadsTable.tsx
+- Recent uploads and full history table with sorting and filtering.
+#### [NEW] frontend/src/components/pcap/FileDetails.tsx
+- Drill-down drawer/modal showing comprehensive metadata and audit logs for a single capture.
+#### [NEW] frontend/src/lib/usePcapWebSocket.ts
+- Custom React hook for connecting to the WebSocket topic and buffering/syncing job state.
+
+***
+
+### 4. Backend: Database Setup (PostgreSQL)
+Set up SQLAlchemy ORM and Alembic migrations.
+#### [MODIFY] backend/requirements.txt
+- Add `sqlalchemy`, `alembic`, `psycopg2-binary`, `redis`, `python-multipart`.
+#### [NEW] backend/database/connection.py
+- Engine, session maker, and Base declarative mapping.
+#### [NEW] backend/database/models.py
+- Define `Capture`, `ProcessingJob`, `ProcessingJobEvent`, and `AuditLog` models.
+#### [NEW] backend/alembic/versions/...
+- Migration script for initial schema creation.
+
+***
+
+### 5. Backend: API Routes & Storage
+Build the PCAP REST endpoints and abstract the local storage mechanism.
+#### [NEW] backend/services/storage.py
+- Local disk abstraction for saving PCAP files (e.g. into a `storage/` directory), preventing duplicate storage via SHA-256.
+#### [NEW] backend/routers/pcap.py
+- `POST /api/pcap/uploads`: File upload and job creation.
+- `GET /api/pcap/uploads`, `GET /api/pcap/uploads/{id}`: Fetch data.
+- `DELETE /api/pcap/uploads/{id}`: Soft delete + audit.
+- `POST /api/pcap/jobs/{id}/cancel` & `POST /api/pcap/jobs/{id}/retry`.
+#### [MODIFY] backend/main.py
+- Include the new API router.
+
+***
+
+### 6. Backend: WebSockets & Job Queue
+Introduce the live processing simulation.
+#### [NEW] backend/routers/websocket.py
+- `WS /ws/pcap`: Endpoint for clients to listen to pub/sub events.
+#### [NEW] backend/services/queue.py
+- Redis interface to enqueue jobs and publish updates.
+#### [NEW] backend/worker/stub_pipeline.py
+- Background async task that simulates pipeline stages (`Validating -> Parsing -> Extracting Sessions -> Detecting Threats -> Generating Evidence -> AI Analysis -> Completed`), writes `ProcessingJobEvent` rows to Postgres, and pushes state over Redis pub/sub.
 
 ## Verification Plan
 
-1. **Verify Backend**: Test the expanded FastAPI endpoints using `curl` or browser to ensure pagination and sorting work.
-2. **Verify Frontend Widgets**: Ensure the Next.js app compiles successfully.
-3. **Verify Data Tables**: Click column headers to sort, change pages, and verify the mock backend responds correctly.
-4. **Verify Charts**: Ensure recharts renders cleanly with the dark theme colors.
+### Automated Tests
+- None specified, but basic sanity checks on the API endpoints can be verified via curl/Postman.
 
----
-**Please review and approve this plan by saying "Proceed" and I will begin the massive code generation phase!**
+### Manual Verification
+1. Start PostgreSQL and Redis via Docker Compose.
+2. Run backend API, Frontend UI, and verify the UI connects to the WebSocket successfully.
+3. Upload a sample `.pcap` file through the Upload Zone.
+4. Verify the hash is generated, the file rejects invalid formats, and the progress bar updates live as the background worker steps through the stubbed processing stages.
+5. Verify duplicate uploads correctly error out by referencing the existing hash.
