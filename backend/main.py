@@ -4,7 +4,7 @@ from typing import Optional, List
 import random
 from datetime import datetime, timedelta
 
-app = FastAPI(title="SentinelX API Full")
+app = FastAPI(title="TraceIQ API Full")
 
 app.add_middleware(
     CORSMiddleware,
@@ -13,6 +13,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Import routers after initializing app to avoid circular imports if any
+try:
+    from routers import pcap
+    app.include_router(pcap.router)
+except ImportError:
+    pass # Will be imported later when ready
+
 
 # Helpers
 def generate_mock_alerts(n=50):
