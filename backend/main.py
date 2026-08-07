@@ -1,10 +1,64 @@
+import asyncio
+import logging
+from contextlib import asynccontextmanager
+
+from dotenv import load_dotenv
+
+load_dotenv()
+
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional, List
 import random
 from datetime import datetime, timedelta
 
-app = FastAPI(title="TraceIQ API Full")
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("traceiq")
+
+_worker_task: Optional[asyncio.Task] = None
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # --- Startup ---
+    # Create any tables that don't exist yet. This is a pragmatic stand-in for a
+    # proper Alembic migration (see task.md - "Generate Alembic migration" is
+    # still open). Safe to run every time: create_all() is a no-op for tables
+    # that already exist.
+    try:
+        from database.connection import Base, engine
+        import database.models  # noqa: F401  (registers models on Base.metadata)
+
+        Base.metadata.create_all(bind=engine)
+        logger.info("Database tables verified/created.")
+    except Exception:
+        logger.exception(
+            "Could not create database tables. Is PostgreSQL running and is "
+            "DATABASE_URL set correctly? PCAP upload/list endpoints will fail "
+            "until this is fixed."
+        )
+
+    global _worker_task
+    try:
+        from worker.stub_pipeline import run_pipeline_worker
+
+        _worker_task = asyncio.create_task(run_pipeline_worker())
+        logger.info("PCAP pipeline worker started.")
+    except Exception:
+        logger.exception("Could not start the PCAP pipeline worker.")
+
+    yield
+
+    # --- Shutdown ---
+    if _worker_task:
+        _worker_task.cancel()
+        try:
+            await _worker_task
+        except (asyncio.CancelledError, Exception):
+            pass
+
+
+app = FastAPI(title="TraceIQ API Full", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -14,12 +68,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Import routers after initializing app to avoid circular imports if any
-try:
-    from routers import pcap
-    app.include_router(pcap.router)
-except ImportError:
-    pass # Will be imported later when ready
+# Import routers after initializing app to avoid circular imports.
+# NOTE: this used to silently swallow ImportError, which meant a broken DB
+# driver or bad import would make /api/pcap/* routes vanish with no error
+# anywhere. Fail loudly instead so a misconfigured environment shows up in the
+# startup logs instead of as mystery 404s in the UI.
+from routers import pcap
+from routers import websocket as pcap_websocket
+
+app.include_router(pcap.router)
+app.include_router(pcap_websocket.router)
 
 
 # Helpers
