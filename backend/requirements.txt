@@ -7,3 +7,10 @@ redis
 python-multipart
 python-dotenv
 pydantic
+
+# --- Auth module (backend/app) ---
+asyncpg
+pydantic-settings
+PyJWT
+bcrypt
+email-validator

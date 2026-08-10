@@ -4,8 +4,11 @@ from app.config import settings
 
 # Create async engine
 engine = create_async_engine(
-    settings.DATABASE_URL,
+    settings.ASYNC_DATABASE_URL,
     echo=False,  # Set to True for SQL logging during debugging
+    pool_pre_ping=True,
+    connect_args={"timeout": 10},  # asyncpg connect timeout (seconds) - fail fast instead of
+                                    # hanging forever if Postgres is unreachable/misconfigured
 )
 
 # Async session maker

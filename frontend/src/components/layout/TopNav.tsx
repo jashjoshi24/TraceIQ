@@ -1,7 +1,22 @@
+"use client";
+
 import React from 'react';
 import { Shield, Search, Bell, Settings, TerminalSquare } from 'lucide-react';
+import Link from 'next/link';
+import { useAuthStore } from '../../store/authStore';
 
 export default function TopNav() {
+  const { user, roles } = useAuthStore();
+
+  const firstName = user?.profile?.first_name?.trim();
+  const lastName = user?.profile?.last_name?.trim();
+  const fullName = [firstName, lastName].filter(Boolean).join(' ') || user?.username || 'Guest';
+  const primaryRole = roles[0] || 'User';
+
+  const initials = firstName || lastName
+    ? `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase()
+    : (user?.username || '??').slice(0, 2).toUpperCase();
+
   return (
     <header className="flex items-center justify-between px-6 py-3 bg-[#111218] border-b border-gray-800 shrink-0">
       <div className="flex items-center gap-3">
@@ -33,15 +48,15 @@ export default function TopNav() {
             <Settings className="w-5 h-5 text-gray-400 hover:text-gray-200" />
           </button>
         </div>
-        <div className="flex items-center gap-3 pl-6 border-l border-gray-800">
+        <Link href="/profile" className="flex items-center gap-3 pl-6 border-l border-gray-800 no-underline">
           <div className="text-right hidden md:block">
-            <p className="text-sm font-medium">Jash Joshi</p>
-            <p className="text-xs text-blue-400">SOC Analyst</p>
+            <p className="text-sm font-medium text-white">{fullName}</p>
+            <p className="text-xs text-blue-400">{primaryRole}</p>
           </div>
           <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-purple-600 flex items-center justify-center border border-gray-700 shadow-sm cursor-pointer hover:opacity-90">
-            <span className="text-xs font-bold shadow-sm">JJ</span>
+            <span className="text-xs font-bold shadow-sm">{initials}</span>
           </div>
-        </div>
+        </Link>
       </div>
     </header>
   );

@@ -1,5 +1,8 @@
+"use client";
+
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { api } from '../../utils/api';
 import { useAuthStore } from '../../store/authStore';
 import { Shield, Lock, User, Mail, AlertCircle, CheckCircle2, UserPlus } from 'lucide-react';
@@ -13,7 +16,7 @@ export const Register: React.FC = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const navigate = useNavigate();
+  const router = useRouter();
   const { login } = useAuthStore();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -39,17 +42,15 @@ export const Register: React.FC = () => {
     setIsLoading(true);
 
     try {
-      // 1. Register user
       await api.post('/auth/register', { username: username.trim(), email: email.trim(), password });
       setSuccess('Account created successfully! Logging you in...');
-      
-      // 2. Auto-login immediately after registration
+
       try {
         await login(username.trim(), password);
       } catch {
         // If auto-login token response is delayed, navigate directly
       }
-      navigate('/profile', { replace: true });
+      router.replace('/profile');
     } catch (err: any) {
       if (!err.response || err.code === 'ERR_NETWORK') {
         setError('⚠️ Cannot connect to TraceIQ backend server. Please start the server using: .\\venv\\Scripts\\uvicorn app.main:app --host 127.0.0.1 --port 8001 --app-dir backend');
@@ -80,7 +81,6 @@ export const Register: React.FC = () => {
       }}
     >
       <div style={{ width: '100%', maxWidth: '440px' }}>
-        {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <div
             style={{
@@ -106,7 +106,6 @@ export const Register: React.FC = () => {
           </p>
         </div>
 
-        {/* Card */}
         <div className="glass-card" style={{ padding: '2rem' }}>
           {error && (
             <div className="alert alert-danger">
@@ -248,7 +247,7 @@ export const Register: React.FC = () => {
 
         <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
           Already registered?{' '}
-          <Link to="/login" style={{ fontWeight: 600 }}>
+          <Link href="/login" style={{ fontWeight: 600 }}>
             Sign In
           </Link>
         </p>

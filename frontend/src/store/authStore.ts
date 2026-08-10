@@ -48,8 +48,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
 
     const roleNames = user.roles.map((r: Role) => r.name);
+    // Defensive: tolerate a role object that (for whatever reason - a backend
+    // contract change, a role fetched without its permissions eager-loaded,
+    // etc.) doesn't include a `permissions` array, so a single bad role can't
+    // throw here and silently break the whole login/hydrate flow.
     const permissionNames = Array.from(
-      new Set(user.roles.flatMap((r: Role) => r.permissions.map((p) => p.name)))
+      new Set(user.roles.flatMap((r: Role) => (r.permissions || []).map((p) => p.name)))
     );
 
     set({

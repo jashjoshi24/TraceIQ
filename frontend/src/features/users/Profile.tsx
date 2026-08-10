@@ -1,11 +1,15 @@
+"use client";
+
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuthStore } from '../../store/authStore';
 import { api } from '../../utils/api';
 import { User, Phone, Building, KeyRound, Save, AlertCircle, CheckCircle2, Shield, LogOut, Users, ShieldCheck } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 
 export const Profile: React.FC = () => {
   const { user, roles, logout, updateProfileState, hasRole } = useAuthStore();
+  const router = useRouter();
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -49,10 +53,15 @@ export const Profile: React.FC = () => {
         avatar,
       });
 
-      setProfileMsg({ type: 'success', text: 'Profile updated successfully!' });
+      setProfileMsg({ type: 'success', text: 'Profile updated successfully! Redirecting to dashboard...' });
 
       const meRes = await api.get('/auth/me');
       updateProfileState(meRes.data);
+
+      // Give the success message a moment to show, then head back to the
+      // dashboard so the updated name/role (now visible in the top nav) is
+      // immediately visible in context.
+      setTimeout(() => router.push('/'), 1200);
     } catch (err: any) {
       const errorDetail = err.response?.data?.detail || 'Failed to update profile.';
       setProfileMsg({ type: 'danger', text: errorDetail });
@@ -83,10 +92,12 @@ export const Profile: React.FC = () => {
         new_password: newPassword,
       });
 
-      setPasswordMsg({ type: 'success', text: 'Password changed successfully!' });
+      setPasswordMsg({ type: 'success', text: 'Password changed successfully! Redirecting to dashboard...' });
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
+
+      setTimeout(() => router.push('/'), 1200);
     } catch (err: any) {
       const errorDetail = err.response?.data?.detail || 'Failed to change password. Please check your current password.';
       setPasswordMsg({ type: 'danger', text: errorDetail });
@@ -144,11 +155,11 @@ export const Profile: React.FC = () => {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           {hasRole('Admin') && (
             <>
-              <Link to="/users" className="btn btn-secondary" style={{ fontSize: '0.85rem' }}>
+              <Link href="/users" className="btn btn-secondary" style={{ fontSize: '0.85rem' }}>
                 <Users size={16} />
                 <span>User Directory</span>
               </Link>
-              <Link to="/roles" className="btn btn-secondary" style={{ fontSize: '0.85rem' }}>
+              <Link href="/roles" className="btn btn-secondary" style={{ fontSize: '0.85rem' }}>
                 <KeyRound size={16} />
                 <span>Roles Matrix</span>
               </Link>

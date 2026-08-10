@@ -1,7 +1,10 @@
+"use client";
+
 import React, { useState } from 'react';
-import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useAuthStore } from '../../store/authStore';
-import { Shield, Lock, User, AlertCircle, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Shield, Lock, User, AlertCircle, ArrowRight } from 'lucide-react';
 
 export const Login: React.FC = () => {
   const [username, setUsername] = useState('');
@@ -9,10 +12,7 @@ export const Login: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const { login, isLoading } = useAuthStore();
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  const from = location.state?.from?.pathname || '/profile';
+  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,7 +25,7 @@ export const Login: React.FC = () => {
 
     try {
       await login(username, password);
-      navigate(from, { replace: true });
+      router.replace('/profile');
     } catch (err: any) {
       if (!err.response || err.code === 'ERR_NETWORK') {
         setError('⚠️ Cannot connect to TraceIQ backend server. Please start the server using: .\\venv\\Scripts\\uvicorn app.main:app --host 127.0.0.1 --port 8001 --app-dir backend');
@@ -60,7 +60,6 @@ export const Login: React.FC = () => {
       }}
     >
       <div style={{ width: '100%', maxWidth: '440px' }}>
-        {/* Brand Card Header */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <div
             style={{
@@ -86,7 +85,6 @@ export const Login: React.FC = () => {
           </p>
         </div>
 
-        {/* Form Card */}
         <div className="glass-card" style={{ padding: '2rem' }}>
           {error && (
             <div className="alert alert-danger">
@@ -130,7 +128,7 @@ export const Login: React.FC = () => {
                 <label className="form-label" htmlFor="password">
                   Password
                 </label>
-                <Link to="/forgot-password" style={{ fontSize: '0.8rem' }}>
+                <Link href="/forgot-password" style={{ fontSize: '0.8rem' }}>
                   Forgot password?
                 </Link>
               </div>
@@ -176,7 +174,6 @@ export const Login: React.FC = () => {
             </button>
           </form>
 
-          {/* Quick Demo Fill Buttons */}
           <div
             style={{
               marginTop: '1.5rem',
@@ -227,10 +224,9 @@ export const Login: React.FC = () => {
           </div>
         </div>
 
-        {/* Footer Link */}
         <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
           Don't have an account?{' '}
-          <Link to="/register" style={{ fontWeight: 600 }}>
+          <Link href="/register" style={{ fontWeight: 600 }}>
             Create an Account
           </Link>
         </p>

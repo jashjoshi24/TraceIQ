@@ -1,6 +1,8 @@
+"use client";
+
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Lock, ArrowLeft, CheckCircle2, ShieldCheck } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Lock, CheckCircle2, ShieldCheck } from 'lucide-react';
 
 export const ResetPassword: React.FC = () => {
   const [password, setPassword] = useState('');
@@ -8,7 +10,7 @@ export const ResetPassword: React.FC = () => {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const navigate = useNavigate();
+  const router = useRouter();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,7 +28,7 @@ export const ResetPassword: React.FC = () => {
 
     setSubmitted(true);
     setTimeout(() => {
-      navigate('/login');
+      router.push('/login');
     }, 1500);
   };
 

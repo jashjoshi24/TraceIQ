@@ -1,6 +1,8 @@
+"use client";
+
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { ShieldAlert, ArrowLeft, Lock } from 'lucide-react';
+import Link from 'next/link';
+import { ShieldAlert, ArrowLeft } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 
 export const Forbidden: React.FC = () => {
@@ -42,7 +44,7 @@ export const Forbidden: React.FC = () => {
         </p>
 
         <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
-          <Link to="/dashboard" className="btn btn-primary">
+          <Link href="/" className="btn btn-primary">
             <ArrowLeft size={16} />
             <span>Return to Dashboard</span>
           </Link>

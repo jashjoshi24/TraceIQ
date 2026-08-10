@@ -1,18 +1,29 @@
-import React from 'react';
-import { Navigate, useLocation, Outlet } from 'react-router-dom';
+"use client";
+
+import React, { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuthStore } from '../store/authStore';
 import { Forbidden } from '../features/common/Forbidden';
-import { ShieldAlert } from 'lucide-react';
 
 interface ProtectedRouteProps {
-  children?: React.ReactNode;
+  children: React.ReactNode;
 }
 
+// Next.js App Router equivalent of the original react-router ProtectedRoute:
+// no <Navigate>/<Outlet> here (those are react-router-only), so an
+// unauthenticated user is redirected via useRouter() inside an effect, and
+// children are rendered directly by whatever layout/page wraps them.
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { isAuthenticated, isHydrated, isLoading } = useAuthStore();
-  const location = useLocation();
+  const router = useRouter();
 
-  if (!isHydrated || isLoading) {
+  useEffect(() => {
+    if (isHydrated && !isAuthenticated) {
+      router.replace('/login');
+    }
+  }, [isHydrated, isAuthenticated, router]);
+
+  if (!isHydrated || isLoading || !isAuthenticated) {
     return (
       <div
         style={{
@@ -42,11 +53,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     );
   }
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
-  }
-
-  return children ? <>{children}</> : <Outlet />;
+  return <>{children}</>;
 };
 
 interface RoleGuardProps {

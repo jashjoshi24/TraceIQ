@@ -1,5 +1,7 @@
+"use client";
+
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 import { Mail, ArrowLeft, CheckCircle2, KeyRound } from 'lucide-react';
 
 export const ForgotPassword: React.FC = () => {
@@ -59,7 +61,7 @@ export const ForgotPassword: React.FC = () => {
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginBottom: '1.5rem' }}>
                 If an account exists for <strong style={{ color: 'var(--text-primary)' }}>{email}</strong>, you will receive password reset details shortly.
               </p>
-              <Link to="/login" className="btn btn-secondary" style={{ width: '100%' }}>
+              <Link href="/login" className="btn btn-secondary" style={{ width: '100%' }}>
                 Return to Sign In
               </Link>
             </div>
@@ -101,7 +103,7 @@ export const ForgotPassword: React.FC = () => {
         </div>
 
         <p style={{ textAlign: 'center', marginTop: '1.5rem' }}>
-          <Link to="/login" style={{ fontSize: '0.9rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+          <Link href="/login" style={{ fontSize: '0.9rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
             <ArrowLeft size={16} />
             <span>Back to Login</span>
           </Link>
