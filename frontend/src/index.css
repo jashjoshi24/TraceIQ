@@ -175,6 +175,18 @@ a:hover {
   box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.15);
 }
 
+/* Some browsers (notably Chrome/WebKit) render disabled/readonly input text
+   using their own UA color instead of the author `color`, which made
+   "Read-only" fields like Username/Email on the Profile page look empty
+   against this dark background even though a value was present. Force a
+   legible (but visibly muted) color so disabled fields stay readable. */
+.form-input:disabled,
+.form-input[readonly] {
+  color: var(--text-secondary);
+  -webkit-text-fill-color: var(--text-secondary);
+  cursor: not-allowed;
+}
+
 /* Badges */
 .badge {
   display: inline-flex;

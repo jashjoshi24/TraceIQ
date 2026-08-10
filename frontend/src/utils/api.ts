@@ -14,6 +14,7 @@ export let API_BASE_URL = getDynamicBaseURL();
 export const api = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true, // Enables sending/receiving HttpOnly cookies (refresh_token)
+  timeout: 15000, // Fail fast instead of leaving the UI stuck on a spinner forever
   headers: {
     'Content-Type': 'application/json',
   },

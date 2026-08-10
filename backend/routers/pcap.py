@@ -10,8 +10,16 @@ from database.connection import get_db
 from database.models import Capture, ProcessingJob, ProcessingJobEvent, JobStatus, AuditLog
 from services.storage import StorageService
 from services.queue import enqueue_job
+from pcap_auth import get_current_user_id
 
-router = APIRouter(prefix="/api/pcap", tags=["PCAP Manager"])
+# Every route on this router requires a valid TraceIQ session (JWT issued by
+# the auth backend on port 8001). FastAPI runs this dependency before the
+# route body, so an unauthenticated request never reaches the DB.
+router = APIRouter(
+    prefix="/api/pcap",
+    tags=["PCAP Manager"],
+    dependencies=[Depends(get_current_user_id)],
+)
 
 
 # --- Response schemas -------------------------------------------------------
@@ -49,7 +57,11 @@ class ProcessingJobOut(BaseModel):
 
 
 @router.post("/uploads")
-async def upload_pcap(file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def upload_pcap(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user_id: str = Depends(get_current_user_id),
+):
     if not file.filename.endswith(('.pcap', '.pcapng')):
         raise HTTPException(status_code=400, detail="Invalid file format. Only .pcap or .pcapng allowed.")
 
@@ -67,14 +79,15 @@ async def upload_pcap(file: UploadFile = File(...), db: Session = Depends(get_db
     if existing_capture:
         raise HTTPException(status_code=409, detail=f"File already uploaded on {existing_capture.created_at}")
 
-    # Create Capture record
+    # Create Capture record, associated with the authenticated user from the
+    # verified JWT (see pcap_auth.get_current_user_id) instead of a stub.
     new_capture = Capture(
         filename=file.filename,
         original_filename=file.filename,
         size_bytes=len(content),
         sha256_hash=file_hash,
         format="pcapng" if file.filename.endswith(".pcapng") else "pcap",
-        uploader_id="current_user_stub", # Replace with actual JWT user id
+        uploader_id=current_user_id,
         storage_path=file_path,
         status=JobStatus.QUEUED
     )

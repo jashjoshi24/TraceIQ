@@ -2,6 +2,7 @@ from pydantic import BaseModel, EmailStr, Field
 from uuid import UUID
 from datetime import datetime
 from typing import Optional, List
+from app.schemas.rbac import RoleOut
 
 class UserProfileOut(BaseModel):
     id: UUID
@@ -33,15 +34,14 @@ class UserAdminUpdate(BaseModel):
     is_active: Optional[bool] = None
     is_verified: Optional[bool] = None
 
-class RoleOut(BaseModel):
-    id: UUID
-    name: str
-    description: Optional[str] = None
-
-    model_config = {
-        "from_attributes": True
-    }
-
+# NOTE: RoleOut is imported from app.schemas.rbac (single source of truth) so that
+# roles returned here include their `permissions` list. A separate, incomplete
+# RoleOut used to be defined locally in this file (missing `permissions`), which
+# silently broke the frontend: useAuthStore.setUser() does
+# `role.permissions.map(...)` for every role, and Pydantic drops fields not
+# declared on the response model - so `permissions` was always undefined and
+# every login/hydrate for a user with any assigned role threw a TypeError in
+# the browser (which the UI then misreported as "Cannot connect to backend").
 class UserDetailOut(BaseModel):
     id: UUID
     username: str

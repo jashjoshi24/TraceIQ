@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import TopNav from "@/components/layout/TopNav";
-import Sidebar from "@/components/layout/Sidebar";
+// Styles (CSS custom properties, .glass-card, .btn, .form-input, .badge, ...)
+// used by the auth/RBAC pages (Login, Register, Profile, UsersList, ...) -
+// originally loaded via the now-unused Vite entry (main.tsx/App.tsx).
+import "../index.css";
+import { AuthHydrator } from "@/components/AuthHydrator";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -19,15 +22,11 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className={inter.className}>
-        <div className="flex h-screen w-full flex-col bg-[#0b0c10] text-gray-100 font-sans overflow-hidden">
-          <TopNav />
-          <div className="flex flex-1 overflow-hidden">
-            <Sidebar />
-            <main className="flex-1 overflow-y-auto bg-[#0b0c10] scrollbar-thin scrollbar-thumb-gray-800 relative flex flex-col">
-              {children}
-            </main>
-          </div>
-        </div>
+        {/* Restores the auth session (if any) on every page, including
+            /login itself, before ProtectedRoute (in the (dashboard) route
+            group layout) decides whether to redirect. */}
+        <AuthHydrator />
+        {children}
       </body>
     </html>
   );

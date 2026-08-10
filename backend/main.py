@@ -6,11 +6,13 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional, List
 import random
 from datetime import datetime, timedelta
+
+from pcap_auth import get_current_user_id
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("traceiq")
@@ -77,6 +79,12 @@ from routers import pcap
 from routers import websocket as pcap_websocket
 
 app.include_router(pcap.router)
+# Deliberately NOT protected with get_current_user_id: browsers can't attach
+# an Authorization header to a WebSocket handshake, so the same header-based
+# JWT check used on the REST routes doesn't apply here. It only streams job
+# stage/progress updates for jobs whose IDs came from the authenticated REST
+# endpoints above - see PROGRESS.md / integration report for follow-up if
+# stricter websocket auth (token-in-query-string) is wanted later.
 app.include_router(pcap_websocket.router)
 
 
@@ -115,8 +123,12 @@ def paginate_and_sort(data, page, size, sort_by, order):
     end = start + size
     return {"data": data[start:end], "total": len(data), "page": page, "size": size}
 
+# All SOC dashboard endpoints below require a valid TraceIQ session, just
+# like the PCAP Manager routes. `_user` is unused in the handler bodies - the
+# Depends() call itself is what rejects unauthenticated requests with a 401.
+
 @app.get("/api/dashboard/overview")
-def get_overview():
+def get_overview(_user: str = Depends(get_current_user_id)):
     return {
         "security": {"risk_score": 82, "trend": "up", "total_assets": 1250, "vulnerable_assets": 45},
         "threat": {"active_threats": 14, "new_detections_24h": 56, "top_category": "Credential Access"},
@@ -126,47 +138,47 @@ def get_overview():
     }
 
 @app.get("/api/dashboard/ai-summary")
-def get_ai_summary():
+def get_ai_summary(_user: str = Depends(get_current_user_id)):
     return {
         "narrative": "Over the last 24 hours, the threat landscape has been dominated by a coordinated credential stuffing attack targeting external-facing VPN gateways. AI correlation has tied 45 separate alerts to a single threat actor profile matching APT29 TTPs. Recommendation: Rotate compromised credentials immediately and enforce geo-blocking on the 104.x.x.x subnet."
     }
 
 @app.get("/api/alerts")
-def get_alerts_endpoint(page: int = 1, size: int = 10, sort_by: str = "timestamp", order: str = "desc", severity: Optional[str] = None):
+def get_alerts_endpoint(page: int = 1, size: int = 10, sort_by: str = "timestamp", order: str = "desc", severity: Optional[str] = None, _user: str = Depends(get_current_user_id)):
     filtered = ALERTS
     if severity:
         filtered = [a for a in filtered if a["severity"].lower() == severity.lower()]
     return paginate_and_sort(filtered, page, size, sort_by, order)
 
 @app.get("/api/incidents")
-def get_incidents_endpoint(page: int = 1, size: int = 10, sort_by: str = "created_at", order: str = "desc"):
+def get_incidents_endpoint(page: int = 1, size: int = 10, sort_by: str = "created_at", order: str = "desc", _user: str = Depends(get_current_user_id)):
     return paginate_and_sort(INCIDENTS, page, size, sort_by, order)
 
 @app.get("/api/investigations")
-def get_investigations_endpoint(page: int = 1, size: int = 10, sort_by: str = "last_updated", order: str = "desc"):
+def get_investigations_endpoint(page: int = 1, size: int = 10, sort_by: str = "last_updated", order: str = "desc", _user: str = Depends(get_current_user_id)):
     return paginate_and_sort(INVESTIGATIONS, page, size, sort_by, order)
 
 @app.get("/api/devices")
-def get_devices_endpoint(page: int = 1, size: int = 10, sort_by: str = "alerts_count", order: str = "desc"):
+def get_devices_endpoint(page: int = 1, size: int = 10, sort_by: str = "alerts_count", order: str = "desc", _user: str = Depends(get_current_user_id)):
     return paginate_and_sort(DEVICES, page, size, sort_by, order)
 
 @app.get("/api/charts/threat-trends")
-def get_threat_trends():
+def get_threat_trends(_user: str = Depends(get_current_user_id)):
     return [{"time": f"{i:02d}:00", "Critical": random.randint(0,5), "High": random.randint(2,10), "Medium": random.randint(5,20)} for i in range(24)]
 
 @app.get("/api/charts/alert-distribution")
-def get_alert_dist():
+def get_alert_dist(_user: str = Depends(get_current_user_id)):
     return [{"name": "Malware", "value": 35}, {"name": "Intrusion", "value": 25}, {"name": "Anomaly", "value": 20}, {"name": "Policy", "value": 20}]
 
 @app.get("/api/charts/severity-distribution")
-def get_severity_dist():
+def get_severity_dist(_user: str = Depends(get_current_user_id)):
     return [{"name": "Critical", "value": len([a for a in ALERTS if a['severity']=='Critical'])},
             {"name": "High", "value": len([a for a in ALERTS if a['severity']=='High'])},
             {"name": "Medium", "value": len([a for a in ALERTS if a['severity']=='Medium'])},
             {"name": "Low", "value": len([a for a in ALERTS if a['severity']=='Low'])}]
 
 @app.get("/api/system/health")
-def get_system_health():
+def get_system_health(_user: str = Depends(get_current_user_id)):
     return [
         {"service": "Threat Engine", "status": "Healthy", "uptime": "99.9%", "latency": "45ms"},
         {"service": "Log Ingestion", "status": "Warning", "uptime": "99.5%", "latency": "120ms"},
@@ -176,11 +188,11 @@ def get_system_health():
     ]
 
 @app.get("/api/network/health")
-def get_network_health():
+def get_network_health(_user: str = Depends(get_current_user_id)):
     return {"packet_volume": "14.5 TB", "error_rate": "0.02%", "throughput": "4.5 Gbps", "trend": "stable"}
 
 @app.get("/api/threat-intel")
-def get_threat_intel():
+def get_threat_intel(_user: str = Depends(get_current_user_id)):
     return [
         {"ioc": "104.21.34.12", "type": "IP", "actor": "APT29", "severity": "Critical", "source": "CrowdStrike"},
         {"ioc": "winword.exe_payload", "type": "File Hash", "actor": "Unknown", "severity": "High", "source": "AlienVault"},
@@ -188,7 +200,7 @@ def get_threat_intel():
     ]
 
 @app.get("/api/mitre-coverage")
-def get_mitre_coverage():
+def get_mitre_coverage(_user: str = Depends(get_current_user_id)):
     return [
         {"tactic": "Initial Access", "score": 85},
         {"tactic": "Execution", "score": 92},
