@@ -34,24 +34,22 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response Interceptor: Silent Token Refresh on 401 & Port Auto-Fallback
+// Response Interceptor: Silent Token Refresh on 401
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
-    // Handle Network Connection Errors (Try fallback port 8000 or switch localhost/127.0.0.1)
-    if (!error.response || error.code === 'ERR_NETWORK') {
-      if (!originalRequest._portTried) {
-        originalRequest._portTried = true;
-        const currentHost = typeof window !== 'undefined' ? window.location.hostname : '127.0.0.1';
-        API_BASE_URL = `http://${currentHost}:8000`;
-        api.defaults.baseURL = API_BASE_URL;
-        originalRequest.baseURL = API_BASE_URL;
-        return api(originalRequest);
-      }
-    }
-    
+    // NOTE: this used to also catch network errors (!error.response / ERR_NETWORK) and
+    // silently retry on port 8000 - the PCAP/dashboard backend, not the auth backend.
+    // That "fallback" mutated the shared, module-level API_BASE_URL, so a single
+    // connection failure to 8001 (e.g. auth backend not started yet) would permanently
+    // repoint every subsequent /auth/* call at port 8000 for the rest of the page
+    // session, even after the auth backend came up - producing endless 404s that had
+    // nothing to do with credentials or the database. Port 8000 and 8001 are two
+    // different services with disjoint routes; if the auth backend is unreachable, the
+    // right behavior is to surface that error, not quietly call a different backend.
+
     // Check if error is 401, request hasn't been retried yet, and isn't auth/login or auth/refresh
     if (
       error.response?.status === 401 &&

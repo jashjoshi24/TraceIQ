@@ -7,8 +7,15 @@ engine = create_async_engine(
     settings.ASYNC_DATABASE_URL,
     echo=False,  # Set to True for SQL logging during debugging
     pool_pre_ping=True,
-    connect_args={"timeout": 10},  # asyncpg connect timeout (seconds) - fail fast instead of
-                                    # hanging forever if Postgres is unreachable/misconfigured
+    connect_args={
+        "timeout": 10,  # asyncpg connect timeout (seconds) - fail fast instead of
+                         # hanging forever if Postgres is unreachable/misconfigured
+        "ssl": True,    # Neon requires TLS. asyncpg doesn't understand the libpq-style
+                         # "sslmode"/"channel_binding" query params (those belong on the
+                         # DATABASE_URL used by the sync/psycopg2 backend), so SSL has to
+                         # be turned on here instead - keep ASYNC_DATABASE_URL itself free
+                         # of query params.
+    },
 )
 
 # Async session maker
