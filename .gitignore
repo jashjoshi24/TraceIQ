@@ -24,3 +24,7 @@ Thumbs.db
 .vscode/
 .idea/
 *.swp
+
+__pycache__/
+*.pyc
+*.pyo
