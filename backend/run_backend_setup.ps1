@@ -11,8 +11,16 @@
 $ErrorActionPreference = "Continue"
 Set-Location -Path $PSScriptRoot
 
-Write-Host "== Writing .env ==" -ForegroundColor Cyan
-$envContent = @"
+$envPath = Join-Path $PSScriptRoot "..\.env"
+if (Test-Path $envPath) {
+    # Don't clobber an existing .env - this used to unconditionally overwrite it with
+    # local Postgres defaults on every run, silently reverting any DATABASE_URL /
+    # ASYNC_DATABASE_URL you'd pointed at Neon (or anywhere else). Edit ..\.env by hand
+    # for DB/JWT config now; this script only bootstraps it the first time.
+    Write-Host "== .env already exists at $envPath - leaving it as-is ==" -ForegroundColor Cyan
+} else {
+    Write-Host "== Writing default .env (local Postgres) - edit ..\.env afterward for Neon/other config ==" -ForegroundColor Cyan
+    $envContent = @"
 DATABASE_URL=postgresql://postgres:Jash%400550@localhost:5432/traceiq
 ASYNC_DATABASE_URL=postgresql+asyncpg://postgres:Jash%400550@localhost:5432/traceiq
 PCAP_STORAGE_DIR=./pcap-storage
@@ -23,8 +31,9 @@ ACCESS_TOKEN_EXPIRE_MINUTES=15
 REFRESH_TOKEN_EXPIRE_DAYS=7
 CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
 "@
-Set-Content -Path (Join-Path $PSScriptRoot "..\.env") -Value $envContent -NoNewline
-Write-Host "Wrote ..\.env" -ForegroundColor Green
+    Set-Content -Path $envPath -Value $envContent -NoNewline
+    Write-Host "Wrote $envPath" -ForegroundColor Green
+}
 
 Write-Host "== Locating psql ==" -ForegroundColor Cyan
 $env:PGPASSWORD = "Jash@0550"
